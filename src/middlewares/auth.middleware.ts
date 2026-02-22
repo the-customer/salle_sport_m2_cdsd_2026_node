@@ -1,0 +1,38 @@
+import { NextFunction, Request, Response } from "express";
+import { verifyToken } from "../utils/jwt";
+import { UserService } from "../services/user.service";
+import { AuthenticatedRequest } from "../utils/interfaces";
+
+
+export const authMiddleware = (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const header = req.headers.authorization;
+        if (!header || !header.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' })
+        }
+
+        const token = header.split(' ')[1];
+        //verify if the token valid
+        const decoded = verifyToken(token);
+        //find the user with credentials
+        const user = UserService.findById(decoded.id);
+        if (!user || !user.isActive) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' })
+        }
+        //inject the user in the request
+        req.user = {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            fullname: user.fullname
+        };
+        next()
+
+    } catch (error) {
+        return res.status(401).json({ success: false, message: 'Invalid token' })
+    }
+}
