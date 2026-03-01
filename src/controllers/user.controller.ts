@@ -1,16 +1,21 @@
-import { Request, Response } from "express"
+import { NextFunction, Request, Response } from "express"
 import { UserService } from "../services/user.service";
 import { TicketService } from "../services/ticket.service";
 import { AuthenticatedRequest } from "../utils/interfaces";
 
 export const UserController = {
-    list(req: Request, res: Response) {
+    async list(req: Request, res: Response, next: NextFunction) {
+        console.log("Controller")
+        try {
+            const allUsers = await UserService.list(req.query)
+            res.json({
+                success: true,
+                data: allUsers
+            })
+        } catch (error) {
+            next(error);
+        }
 
-        const users = UserService.list()
-        res.json({
-            success: true,
-            data: users
-        })
     },
     findOneById(req: AuthenticatedRequest, res: Response) {
         const user = req.user;

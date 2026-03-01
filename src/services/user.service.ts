@@ -1,11 +1,52 @@
 import { hashPassword } from './../utils/password';
-import { users } from "../data/user.data";
 import { User } from "../models";
+import { users } from '../data/user.data';
+import { NumberLiteralType } from 'typescript';
+import { Op } from 'sequelize';
 
+type ListQuery = {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: string;
+}
 
 export const UserService = {
-    list() {
-        return [...users];
+    async list(query:ListQuery) {
+        const page = query.page && query.page > 0 ? query.page : 1;
+        const isActive = query.isActive ? query.isActive : '';
+        const limit = query.limit && query.limit>0 ? Math.min(query.limit,100) : 20;
+        const offset = (page - 1) * limit
+
+        const where: any = {} 
+
+        if(isActive === "active"){
+            where.isActive = true;
+        }else if(isActive === "inactive"){
+            where.isActive = false;
+        }
+
+        if (query.search && query.search.trim()){
+            const q = `%${query.search.trim()}%`;
+            where[Op.or] = [
+                { fullName: {[Op.like] : q} },
+                { email: {[Op.like] : q} }
+            ]
+        }
+
+        const {rows, count} = await User.findAndCountAll({
+            where,
+            limit,
+            offset,
+            order: [['fullName','ASC']]
+        });
+        return {
+            items: rows,
+            total: count,
+            page,
+            limit,
+            totalPages: Math.ceil(count/limit)
+        };
     },
     findById(userId: number) {
         return users.find(u => u.id === userId);

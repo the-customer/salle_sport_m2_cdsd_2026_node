@@ -33,6 +33,7 @@ export const authMiddleware = (
         next()
 
     } catch (error) {
+        console.log(error)
         return res.status(401).json({ success: false, message: 'Invalid token' })
     }
 }
